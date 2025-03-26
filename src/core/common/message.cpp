@@ -75,6 +75,8 @@ Message *MessagePool::Allocate(Message::Type aType, uint16_t aReserveHeader, con
 
     VerifyOrExit((message = static_cast<Message *>(NewBuffer(aSettings.GetPriority()))) != nullptr);
 
+    LogCrit("Allocated message: %p", message);
+
     ClearAllBytes(*message);
     message->SetMessagePool(this);
     message->SetType(aType);
@@ -108,6 +110,7 @@ void MessagePool::Free(Message *aMessage)
     OT_ASSERT(aMessage->Next() == nullptr && aMessage->Prev() == nullptr);
 
     FreeBuffers(static_cast<Buffer *>(aMessage));
+    LogCrit("Freed message: %p", aMessage);
 }
 
 Buffer *MessagePool::NewBuffer(Message::Priority aPriority)
@@ -124,11 +127,14 @@ Buffer *MessagePool::NewBuffer(Message::Priority aPriority)
 #endif
                    ) == nullptr)
     {
+        LogCrit("Failed to allocate buffer, ReclaimBuffers");
         SuccessOrExit(ReclaimBuffers(aPriority));
     }
 
     mNumAllocated++;
     mMaxAllocated = Max(mMaxAllocated, mNumAllocated);
+
+    LogCrit("Allocated buffer: %p, mNumAllocated: %u", buffer, mNumAllocated);
 
     buffer->SetNextBuffer(nullptr);
 
@@ -155,6 +161,7 @@ void MessagePool::FreeBuffers(Buffer *aBuffer)
 #endif
         mNumAllocated--;
 
+        LogCrit("Freed buffer: %p, mNumAllocated: %u", aBuffer, mNumAllocated);
         aBuffer = next;
     }
 }
