@@ -550,27 +550,34 @@ void MeshForwarder::ScheduleTransmissionTask(void)
     LogCrit("ScheduleTransmissionTask: Entry, mSendBusy=%d, mTxPaused=%d", mSendBusy, mTxPaused);
 
     VerifyOrExit(!mSendBusy && !mTxPaused);
-    LogCrit("ScheduleTransmissionTask: Passed mSendBusy/mTxPaused check");
+    // LogCrit("ScheduleTransmissionTask: Passed mSendBusy/mTxPaused check");
 
 #if OPENTHREAD_FTD && OPENTHREAD_CONFIG_MAC_COLLISION_AVOIDANCE_DELAY_ENABLE
-    VerifyOrExit(!mDelayNextTx);
-    LogCrit("ScheduleTransmissionTask: Passed mDelayNextTx check");
+    if (mDelayNextTx)
+    {
+        LogCrit("ScheduleTransmissionTask: Delay next tx");
+        ExitNow();
+    }
 #endif
 
     mSendMessage = PrepareNextDirectTransmission();
-    LogCrit("ScheduleTransmissionTask: PrepareNextDirectTransmission returned %p", mSendMessage);
-    VerifyOrExit(mSendMessage != nullptr);
+    // LogCrit("ScheduleTransmissionTask: PrepareNextDirectTransmission returned %p", mSendMessage);
+    if (mSendMessage == nullptr)
+    {
+        LogCrit("ScheduleTransmissionTask: No message to send");
+        ExitNow();
+    }
 
     if (mSendMessage->GetOffset() == 0)
     {
         mSendMessage->SetTxSuccess(true);
     }
 
-    LogCrit("ScheduleTransmissionTask: Requesting frame transmission");
+    // LogCrit("ScheduleTransmissionTask: Requesting frame transmission");
     Get<Mac::Mac>().RequestDirectFrameTransmission();
 
 exit:
-    LogCrit("ScheduleTransmissionTask: Exit");
+    // LogCrit("ScheduleTransmissionTask: Exit");
     return;
 }
 
@@ -579,7 +586,7 @@ Message *MeshForwarder::PrepareNextDirectTransmission(void)
     Message *curMessage, *nextMessage;
     Error    error = kErrorNone;
 
-    LogCrit("PrepareNextDirectTransmission: Entry");
+    // LogCrit("PrepareNextDirectTransmission: Entry");
 
     for (curMessage = mSendQueue.GetHead(); curMessage; curMessage = nextMessage)
     {
@@ -592,13 +599,13 @@ Message *MeshForwarder::PrepareNextDirectTransmission(void)
 
         if (!curMessage->IsDirectTransmission())
         {
-            LogCrit("PrepareNextDirectTransmission: Skipping message %p, not direct transmission", curMessage);
+            // LogCrit("PrepareNextDirectTransmission: Skipping message %p, not direct transmission", curMessage);
             continue;
         }
 
         if (curMessage->IsResolvingAddress())
         {
-            LogCrit("PrepareNextDirectTransmission: Skipping message %p, resolving address", curMessage);
+            // LogCrit("PrepareNextDirectTransmission: Skipping message %p, resolving address", curMessage);
             continue;
         }
 
@@ -659,7 +666,7 @@ Message *MeshForwarder::PrepareNextDirectTransmission(void)
 
 #if OPENTHREAD_FTD
         case kErrorAddressQuery:
-            LogCrit("PrepareNextDirectTransmission: Message %p set to resolving address", curMessage);
+            // LogCrit("PrepareNextDirectTransmission: Message %p set to resolving address", curMessage);
             curMessage->SetResolvingAddress(true);
             continue;
 #endif
@@ -676,7 +683,7 @@ Message *MeshForwarder::PrepareNextDirectTransmission(void)
     }
 
 exit:
-    LogCrit("PrepareNextDirectTransmission: Exit, returning message %p", curMessage);
+    // LogCrit("PrepareNextDirectTransmission: Exit, returning message %p", curMessage);
     return curMessage;
 }
 
@@ -793,7 +800,7 @@ Mac::TxFrame *MeshForwarder::HandleFrameRequest(Mac::TxFrames &aTxFrames)
     Mac::TxFrame *frame         = nullptr;
     bool          addFragHeader = false;
 
-    LogCrit("HandleFrameRequest: Entry, mSendMessage=%p", mSendMessage);
+    // LogCrit("HandleFrameRequest: Entry, mSendMessage=%p", mSendMessage);
     VerifyOrExit(mEnabled && (mSendMessage != nullptr));
 
 #if OPENTHREAD_CONFIG_MULTI_RADIO
@@ -1228,7 +1235,7 @@ void MeshForwarder::HandleSentFrame(Mac::TxFrame &aFrame, Error aError)
     Neighbor    *neighbor = nullptr;
     Mac::Address macDest;
 
-    LogCrit("HandleSentFrame: Entry, aError=%s", ErrorToString(aError));
+    // LogCrit("HandleSentFrame: Entry, aError=%s", ErrorToString(aError));
     OT_ASSERT((aError == kErrorNone) || (aError == kErrorChannelAccessFailure) || (aError == kErrorAbort) ||
               (aError == kErrorNoAck));
 
@@ -1323,7 +1330,7 @@ void MeshForwarder::UpdateSendMessage(Error aFrameTxError, Mac::Address &aMacDes
     RemoveMessageIfNoPendingTx(*mSendMessage);
 
 exit:
-    LogCrit("UpdateSendMessage: Posting mScheduleTransmissionTask");
+    // LogCrit("UpdateSendMessage: Posting mScheduleTransmissionTask");
     mScheduleTransmissionTask.Post();
 }
 
